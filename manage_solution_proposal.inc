@@ -4,8 +4,8 @@ function lab_migration_solution_proposal_pending()
   {
     /* get list of solution proposal where the solution_provider_uid is set to some userid except 0 and solution_status is also 1 */
     $pending_rows = array();
-    //$pending_q = db_query("SELECT * FROM {lab_migration_proposal} WHERE solution_provider_uid != 0 AND solution_status = 1 ORDER BY id DESC");
-    $query = db_select('lab_migration_proposal');
+    //$pending_q = $injected_database->query("SELECT * FROM {lab_migration_proposal} WHERE solution_provider_uid != 0 AND solution_status = 1 ORDER BY id DESC");
+    $query = \Drupal::database()->select('lab_migration_proposal');
     $query->fields('lab_migration_proposal');
     $query->condition('solution_provider_uid', 0, '!=');
     $query->condition('solution_status', 1);
@@ -13,16 +13,19 @@ function lab_migration_solution_proposal_pending()
     $pending_q = $query->execute();
     while ($pending_data = $pending_q->fetchObject())
       {
-        $pending_rows[$pending_data->id] = array(
-            l($pending_data->name, 'user/' . $pending_data->uid),
-            $pending_data->lab_title,
-            l('Approve', 'lab-migration/manage-proposal/solution-proposal-approve/' . $pending_data->id)
-        );
+        // @FIXME
+// \Drupal\Core\Link expects a Url object, created from a route name or external URI.
+// $pending_rows[$pending_data->id] = array(
+//             l($pending_data->name, 'user/' . $pending_data->uid),
+//             $pending_data->lab_title,
+//             l('Approve', 'lab-migration/manage-proposal/solution-proposal-approve/' . $pending_data->id)
+//         );
+
       }
     /* check if there are any pending proposals */
     if (!$pending_rows)
       {
-        drupal_set_message(t('There are no pending solution proposals.'), 'status');
+        \Drupal::messenger()->addStatus(t('There are no pending solution proposals.'));
         return '';
       }
     $pending_header = array(
@@ -30,10 +33,19 @@ function lab_migration_solution_proposal_pending()
         'Title of the Lab',
         'Action'
     );
-    $output = theme('table', array(
-        'header' => $pending_header,
-        'rows' => $pending_rows
-    ));
+    // @FIXME
+// _theme has been renamed to __theme and should NEVER be called directly.
+// Calling __theme directly can alter the expected output and potentially
+// introduce security issues (see https://www.drupal.org/node/2195739). You
+// should use renderable arrays instead.
+// 
+// 
+// @see https://www.drupal.org/node/2195739
+// $output = theme('table', array(
+//         'header' => $pending_header,
+//         'rows' => $pending_rows
+//     ));
+
     return $output;
   }
 /******************************************************************************/
@@ -41,11 +53,11 @@ function lab_migration_solution_proposal_pending()
 /******************************************************************************/
 function lab_migration_solution_proposal_approval_form($form, $form_state)
   {
-    global $user;
+    $user = \Drupal::currentUser();
     /* get current proposal */
     $proposal_id = (int) arg(3);
-    // $proposal_q = db_query("SELECT * FROM {lab_migration_proposal} WHERE id = %d", $proposal_id);
-    $query = db_select('lab_migration_proposal');
+    // $proposal_q = $injected_database->query("SELECT * FROM {lab_migration_proposal} WHERE id = %d", $proposal_id);
+    $query = \Drupal::database()->select('lab_migration_proposal');
     $query->fields('lab_migration_proposal');
     $query->condition('id', $proposal_id);
     $proposal_q = $query->execute();
@@ -57,25 +69,28 @@ function lab_migration_solution_proposal_approval_form($form, $form_state)
           }
         else
           {
-            drupal_set_message(t('Invalid proposal selected. Please try again.'), 'error');
-            drupal_goto('lab-migration/manage-proposal/pending-solution-proposal');
+            \Drupal::messenger()->addError(t('Invalid proposal selected. Please try again.'));
+            RedirectResponse('lab-migration/manage-proposal/pending-solution-proposal');
             return;
           }
       }
     else
       {
-        drupal_set_message(t('Invalid proposal selected. Please try again.'), 'error');
-        drupal_goto('lab-migration/manage-proposal/pending-solution-proposal');
+        \Drupal::messenger()->addError(t('Invalid proposal selected. Please try again.'));
+        RedirectResponse('lab-migration/manage-proposal/pending-solution-proposal');
         return;
       }
-    $form['name'] = array(
-    '#type' => 'item',
-    '#markup' => l($proposal_data->solution_provider_name_title . ' ' . $proposal_data->solution_provider_name, 'user/' . $proposal_data->solution_provider_uid),
-    '#title' => t('Solution Provider Name'),
-  );
+    // @FIXME
+// \Drupal\Core\Link expects a Url object, created from a route name or external URI.
+// $form['name'] = array(
+//     '#type' => 'item',
+//     '#markup' => l($proposal_data->solution_provider_name_title . ' ' . $proposal_data->solution_provider_name, 'user/' . $proposal_data->solution_provider_uid),
+//     '#title' => t('Solution Provider Name'),
+//   );
+
   $form['email_id'] = array(
     '#type' => 'item',
-    '#markup' => user_load($proposal_data->solution_provider_uid)->mail,
+    '#markup' => \Drupal::entityTypeManager()->getStorage('user')->load($proposal_data->solution_provider_uid)->mail,
     '#title' => t('Solution Provider Email'),
   );
   $form['contact_ph'] = array(
@@ -130,8 +145,8 @@ $form['country'] = array(
   );
     /* get experiment details */
     $experiment_list = '<ul>';
-    //$experiment_q = db_query("SELECT * FROM {lab_migration_experiment} WHERE proposal_id = %d ORDER BY id ASC", $proposal_id);
-    $query = db_select('lab_migration_experiment');
+    //$experiment_q = $injected_database->query("SELECT * FROM {lab_migration_experiment} WHERE proposal_id = %d ORDER BY id ASC", $proposal_id);
+    $query = \Drupal::database()->select('lab_migration_experiment');
     $query->fields('lab_migration_experiment');
     $query->condition('proposal_id', $proposal_id);
     $query->orderBy('id', 'ASC');
@@ -162,7 +177,7 @@ $form['country'] = array(
       }
     else
       {
-        $solution_provider_user_data = user_load($proposal_data->solution_provider_uid);
+        $solution_provider_user_data = loadMultiple($proposal_data->solution_provider_uid);
         if ($solution_provider_user_data)
           {
             $solution_provider .= '<ul>' . '<li><strong>Solution Provider:</strong> ' . l($solution_provider_user_data->name, 'user/' . $proposal_data->solution_provider_uid) . '</li>' . '<li><strong>Solution Provider Name:</strong> ' . $proposal_data->solution_provider_name_title . ' ' . $proposal_data->solution_provider_name . '</li>' . '<li><strong>Department:</strong> ' . $proposal_data->solution_provider_department . '</li>' . '<li><strong>University:</strong> ' . $proposal_data->solution_provider_university . '</li>' . '</ul>';
@@ -173,18 +188,21 @@ $form['country'] = array(
           }
       }*/
       
-      $proposer .= '<ul>' .
-        '<li><strong>Proposer:</strong> ' . l($proposal_data->name, 'user/' . $proposal_data->uid) . '</li>' .
-        '<li><strong>Proposer Name:</strong> ' . $proposal_data->name_title . ' ' . $proposal_data->name . '</li>' .
-	'<li><strong>Contact No:</strong> ' . $proposal_data->contact_ph. '</li>' .
-	'<li><strong>Email:</strong> ' . user_load($proposal_data->uid)->mail . '</li>' .
-        '<li><strong>Department:</strong> ' . $proposal_data->department . '</li>' .
-        '<li><strong>University:</strong> ' . $proposal_data->university . '</li>' .
-        '<li><strong>Country:</strong> ' . $proposal_data->country . '</li>' .
-        '<li><strong>State:</strong> ' . $proposal_data->state . '</li>' .
-	'<li><strong>City:</strong> ' . $proposal_data->city . '</li>' .
-        '<li><strong>Pincode:</strong> ' . $proposal_data->pincode . '</li>' .
-        '</ul>';
+      // @FIXME
+// \Drupal\Core\Link expects a Url object, created from a route name or external URI.
+// $proposer .= '<ul>' .
+//         '<li><strong>Proposer:</strong> ' . l($proposal_data->name, 'user/' . $proposal_data->uid) . '</li>' .
+//         '<li><strong>Proposer Name:</strong> ' . $proposal_data->name_title . ' ' . $proposal_data->name . '</li>' .
+// 	'<li><strong>Contact No:</strong> ' . $proposal_data->contact_ph. '</li>' .
+// 	'<li><strong>Email:</strong> ' . loadMultiple($proposal_data->uid)->mail . '</li>' .
+//         '<li><strong>Department:</strong> ' . $proposal_data->department . '</li>' .
+//         '<li><strong>University:</strong> ' . $proposal_data->university . '</li>' .
+//         '<li><strong>Country:</strong> ' . $proposal_data->country . '</li>' .
+//         '<li><strong>State:</strong> ' . $proposal_data->state . '</li>' .
+// 	'<li><strong>City:</strong> ' . $proposal_data->city . '</li>' .
+//         '<li><strong>Pincode:</strong> ' . $proposal_data->pincode . '</li>' .
+//         '</ul>';
+
 	$form['proposer_details'] = array(
 	  '#type' => 'item',
 		'#title' => t('Proposer of Lab :'),
@@ -212,23 +230,26 @@ $form['country'] = array(
         '#type' => 'submit',
         '#value' => t('Submit')
     );
-    $form['cancel'] = array(
-        '#type' => 'markup',
-        '#value' => l(t('Cancel'), 'lab-migration/manage-proposal/pending-solution-proposal')
-    );
+    // @FIXME
+// \Drupal\Core\Link expects a Url object, created from a route name or external URI.
+// $form['cancel'] = array(
+//         '#type' => 'markup',
+//         '#value' => l(t('Cancel'), 'lab-migration/manage-proposal/pending-solution-proposal')
+//     );
+
     return $form;
   }
 function lab_migration_solution_proposal_approval_form_validate($form, &$form_state)
   {
     $proposal_id = (int) arg(3);
-    // $solution_provider_q = db_query("SELECT * FROM {lab_migration_proposal} WHERE id = %d", $proposal_id);
-    $query = db_select('lab_migration_proposal');
+    // $solution_provider_q = $injected_database->query("SELECT * FROM {lab_migration_proposal} WHERE id = %d", $proposal_id);
+    $query = \Drupal::database()->select('lab_migration_proposal');
     $query->fields('lab_migration_proposal');
     $query->condition('id', $proposal_id);
     $solution_provider_q = $query->execute();
     $solution_provider_data = $solution_provider_q->fetchObject();
-    //	$solution_provider_present_q = db_query("SELECT * FROM {lab_migration_proposal} WHERE solution_provider_uid = %d AND approval_status IN (0, 1) AND id != %d", $solution_provider_data->uid, $proposal_id);
-    $query = db_select('lab_migration_proposal');
+    //	$solution_provider_present_q = $injected_database->query("SELECT * FROM {lab_migration_proposal} WHERE solution_provider_uid = %d AND approval_status IN (0, 1) AND id != %d", $solution_provider_data->uid, $proposal_id);
+    $query = \Drupal::database()->select('lab_migration_proposal');
     $query->fields('lab_migration_proposal');
     $query->condition('solution_provider_uid', $solution_provider_data->uid);
     $query->condition('approval_status', array(
@@ -239,17 +260,17 @@ function lab_migration_solution_proposal_approval_form_validate($form, &$form_st
     $solution_provider_present_q = $query->execute();
     if ($x = $solution_provider_present_q->fetchObject())
       {
-        drupal_set_message($proposal_id);
-        form_set_error('', t('Solution provider has already one proposal active'));
+        \Drupal::messenger()->addMessage($proposal_id);
+        $form_state->setErrorByName('', t('Solution provider has already one proposal active'));
       }
   }
 function lab_migration_solution_proposal_approval_form_submit($form, &$form_state)
   {
-    global $user;
+    $user = \Drupal::currentUser();
     /* get current proposal */
     $proposal_id = (int) arg(3);
-    //$proposal_q = db_query("SELECT * FROM {lab_migration_proposal} WHERE id = %d", $proposal_id);
-    $query = db_select('lab_migration_proposal');
+    //$proposal_q = $injected_database->query("SELECT * FROM {lab_migration_proposal} WHERE id = %d", $proposal_id);
+    $query = \Drupal::database()->select('lab_migration_proposal');
     $query->fields('lab_migration_proposal');
     $query->condition('id', $proposal_id);
     $proposal_q = $query->execute();
@@ -261,30 +282,30 @@ function lab_migration_solution_proposal_approval_form_submit($form, &$form_stat
           }
         else
           {
-            drupal_set_message(t('Invalid proposal selected. Please try again.'), 'error');
-            drupal_goto('lab-migration/manage-proposal/pending-solution-proposal');
+            \Drupal::messenger()->addError(t('Invalid proposal selected. Please try again.'));
+            RedirectResponse('lab-migration/manage-proposal/pending-solution-proposal');
             return;
           }
       }
     else
       {
-        drupal_set_message(t('Invalid proposal selected. Please try again.'), 'error');
-        drupal_goto('lab-migration/manage-proposal/pending-solution-proposal');
+        \Drupal::messenger()->addError(t('Invalid proposal selected. Please try again.'));
+        RedirectResponse('lab-migration/manage-proposal/pending-solution-proposal');
         return;
       }
-    $user_data = user_load($proposal_data->solution_provider_uid);
+    $user_data = \Drupal::entityTypeManager()->getStorage('user')->load($proposal_data->solution_provider_uid);
     if ($form_state['values']['approval'] == 1)
       {
         $query = "UPDATE {lab_migration_proposal} SET solution_status = 2 WHERE id =:proposal_id";
         $args = array(
             ":proposal_id" => $proposal_id
         );
-        db_query($query, $args);
+        \Drupal::database()->query($query, $args);
         /* sending email */
         $email_to = $user_data->mail;
-        $from = variable_get('lab_migration_from_email', '');
-        $bcc = $user->mail . ', ' . variable_get('lab_migration_emails', '');
-        $cc = variable_get('lab_migration_cc_emails', '');
+        $from = \Drupal::config('lab_migration.settings')->get('lab_migration_from_email');
+        $bcc = $user->mail . ', ' . \Drupal::config('lab_migration.settings')->get('lab_migration_emails');
+        $cc = \Drupal::config('lab_migration.settings')->get('lab_migration_cc_emails');
         $param['solution_proposal_approved']['proposal_id'] = $proposal_id;
         $param['solution_proposal_approved']['user_id'] = $proposal_data->solution_provider_uid;
         $param['solution_proposal_approved']['headers'] = array(
@@ -297,12 +318,12 @@ function lab_migration_solution_proposal_approval_form_submit($form, &$form_stat
             'Bcc' => $bcc
         );
         if (!drupal_mail('lab_migration', 'solution_proposal_approved', $email_to, language_default(), $param, $from, TRUE))
-            drupal_set_message('Error sending email message.', 'error');
-        /*$email_to = $user->mail . ', ' . variable_get('lab_migration_emails', '');
-        if (!drupal_mail('lab_migration', 'solution_proposal_approved', $email_to , language_default(), $param, variable_get('lab_migration_from_email', NULL), TRUE))
-        drupal_set_message('Error sending email message.', 'error');*/
-        drupal_set_message('Lab migration solution proposal approved. User has been notified of the approval.', 'status');
-        drupal_goto('lab-migration/manage-proposal/pending-solution_proposal');
+            \Drupal::messenger()->addError('Error sending email message.');
+        /*$email_to = $user->mail . ', ' . $config->get('lab_migration_emails', '');
+        if (!drupal_mail('lab_migration', 'solution_proposal_approved', $email_to , language_default(), $param, $config->get('lab_migration_from_email', NULL), TRUE))
+        add_message('Error sending email message.', 'error');*/
+        \Drupal::messenger()->addStatus('Lab migration solution proposal approved. User has been notified of the approval.');
+        RedirectResponse('lab-migration/manage-proposal/pending-solution_proposal');
         return;
       }
     else if ($form_state['values']['approval'] == 2)
@@ -313,12 +334,12 @@ function lab_migration_solution_proposal_approval_form_submit($form, &$form_stat
             ":solution_status" => 0,
             ":proposal_id" => $proposal_id
         );
-        db_query($query, $args);
+        \Drupal::database()->query($query, $args);
         /* sending email */
         $email_to = $user_data->mail;
-        $from = variable_get('lab_migration_from_email', '');
-        $bcc = $user->mail . ', ' . variable_get('lab_migration_emails', '');
-        $cc = variable_get('lab_migration_cc_emails', '');
+        $from = \Drupal::config('lab_migration.settings')->get('lab_migration_from_email');
+        $bcc = $user->mail . ', ' . \Drupal::config('lab_migration.settings')->get('lab_migration_emails');
+        $cc = \Drupal::config('lab_migration.settings')->get('lab_migration_cc_emails');
         $param['solution_proposal_disapproved']['proposal_id'] = $proposal_id;
         $param['solution_proposal_disapproved']['user_id'] = $proposal_data->solution_provider_uid;
         $param['solution_proposal_disapproved']['message'] = $form_state['values']['message'];
@@ -332,9 +353,9 @@ function lab_migration_solution_proposal_approval_form_submit($form, &$form_stat
             'Bcc' => $bcc
         );
         if (!drupal_mail('lab_migration', 'solution_proposal_disapproved', $email_to, language_default(), $param, $from, TRUE))
-            drupal_set_message('Error sending email message.', 'error');
-        drupal_set_message('Lab migration solution proposal dis-approved. User has been notified of the dis-approval.', 'status');
-        drupal_goto('lab-migration/manage-proposal/pending-solution-proposal');
+            \Drupal::messenger()->addError('Error sending email message.');
+        \Drupal::messenger()->addStatus('Lab migration solution proposal dis-approved. User has been notified of the dis-approval.');
+        RedirectResponse('lab-migration/manage-proposal/pending-solution-proposal');
         return;
       }
   }

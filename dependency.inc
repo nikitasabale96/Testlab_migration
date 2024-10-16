@@ -2,11 +2,11 @@
 // $Id$
 function lab_migration_upload_dependency_form($form, $form_state)
   {
-    global $user;
-    $proposal_data = lab_migration_get_proposal();
+    $user = \Drupal::currentUser();
+    $proposal_data = lab_migration_get_proposa\Drupal\Core\Link;
     if (!$proposal_data)
       {
-        drupal_goto('');
+        RedirectResponse('');
         return;
       }
     $form['#attributes'] = array(
@@ -36,7 +36,7 @@ function lab_migration_upload_dependency_form($form, $form_state)
     $form['depfile']['depfile1'] = array(
         '#type' => 'file',
         '#title' => t('Upload dependency file'),
-        '#description' => t("Allowed file extensions : ") . variable_get('lab_migration_dependency_extensions', '')
+        '#description' => t("Allowed file extensions : ") . \Drupal::config('lab_migration.settings')->get('lab_migration_dependency_extensions')
     );
     $form['depfile']['depfile1_caption'] = array(
         '#type' => 'textfield',
@@ -53,18 +53,21 @@ function lab_migration_upload_dependency_form($form, $form_state)
         '#type' => 'submit',
         '#value' => t('Submit')
     );
-    $form['cancel'] = array(
-        '#type' => 'markup',
-        '#value' => l(t('Back'), 'lab_migration/code')
-    );
+    // @FIXME
+// \Drupal\Core\Link expects a Url object, created from a route name or external URI.
+// $form['cancel'] = array(
+//         '#type' => 'markup',
+//         '#value' => l(t('Back'), 'lab_migration/code')
+//     );
+
     return $form;
   }
 function lab_migration_upload_dependency_form_validate($form, &$form_state)
   {
-    global $user;
+    $user = \Drupal::currentUser();
     /* get approved proposal details */
-    //$proposal_q = db_query("SELECT * FROM {lab_migration_proposal} WHERE uid = %d OR solution_provider_uid = %d ORDER BY id DESC LIMIT 1", $user->uid, $user->uid);
-    $query = db_select('lab_migration_proposal');
+    //$proposal_q = $injected_database->query("SELECT * FROM {lab_migration_proposal} WHERE uid = %d OR solution_provider_uid = %d ORDER BY id DESC LIMIT 1", $user->uid, $user->uid);
+    $query = \Drupal::database()->select('lab_migration_proposal');
     $query->fields('lab_migration_proposal');
     $or = db_or();
     $or->condition('uid', $user->uid);
@@ -76,46 +79,46 @@ function lab_migration_upload_dependency_form_validate($form, &$form_state)
     $proposal_data = $proposal_q->fetchObject();
     if (!$proposal_data)
       {
-        form_set_error('', t('Invalid1'));
+        $form_state->setErrorByName('', t('Invalid1'));
       }
     if (!lab_migration_check_name($form_state['values']['depfile1_caption']))
-        form_set_error('code_caption', t('Caption can contain only alphabets, numbers and spaces.'));
+        $form_state->setErrorByName('code_caption', t('Caption can contain only alphabets, numbers and spaces.'));
     if (isset($_FILES['files']))
       {
         /* check for valid filename extensions */
-        $allowed_extensions = explode(',', variable_get('lab_migration_dependency_extensions', ''));
+        $allowed_extensions = explode(',', \Drupal::config('lab_migration.settings')->get('lab_migration_dependency_extensions'));
         foreach ($_FILES['files']['name'] as $file_form_name => $file_name)
           {
             if ($file_name)
               {
                 $temp_extension = end(explode('.', strtolower($_FILES['files']['name'][$file_form_name])));
                 if (!in_array($temp_extension, $allowed_extensions))
-                    form_set_error($file_form_name, t('Only ' . variable_get('lab_migration_dependency_extensions', '') . ' extensions can be uploaded.'));
+                    $form_state->setErrorByName($file_form_name, t('Only ' . \Drupal::config('lab_migration.settings')->get('lab_migration_dependency_extensions') . ' extensions can be uploaded.'));
                 if ($_FILES['files']['size'][$file_form_name] <= 0)
-                    form_set_error($file_form_name, t('File size cannot be zero.'));
+                    $form_state->setErrorByName($file_form_name, t('File size cannot be zero.'));
                 /* check if file already exists */
-                //$dep_exists_data = (db_query("SELECT * FROM {lab_migration_dependency_files} WHERE filename = '%s'", $_FILES['files']['name'][$file_form_name]))->fetchObject();
-                $query = db_select('lab_migration_dependency_files');
+                //$dep_exists_data = ($injected_database->query("SELECT * FROM {lab_migration_dependency_files} WHERE filename = '%s'", $_FILES['files']['name'][$file_form_name]))->fetchObject();
+                $query = \Drupal::database()->select('lab_migration_dependency_files');
                 $query->fields('lab_migration_dependency_files');
                 $query->condition('filename', $_FILES['files']['name'][$file_form_name]);
                 $dep_exists_data = $query->execute();
                 if ($dep_exists_data)
-                    form_set_error($file_form_name, t('Dependency file with the same name has already been uploaded in this or some other lab solution. Please rename the file and try again.'));
+                    $form_state->setErrorByName($file_form_name, t('Dependency file with the same name has already been uploaded in this or some other lab solution. Please rename the file and try again.'));
                 /* check if valid file name */
                 if (!lab_migration_check_valid_filename($_FILES['files']['name'][$file_form_name]))
-                    form_set_error($file_form_name, t('Invalid file name specified. Only alphabets, numbers and underscore is allowed as a valid filename.'));
+                    $form_state->setErrorByName($file_form_name, t('Invalid file name specified. Only alphabets, numbers and underscore is allowed as a valid filename.'));
               }
           }
       }
   }
 function lab_migration_upload_dependency_form_submit($form, &$form_state)
   {
-    global $user;
+    $user = \Drupal::currentUser();
     $root_path = lab_migration_path();
-    $proposal_data = lab_migration_get_proposal();
+    $proposal_data = lab_migration_get_proposa\Drupal\Core\Link;
     if (!$proposal_data)
       {
-        drupal_goto('');
+        RedirectResponse('');
         return;
       }
     $dest_path .= 'DEPENDENCIES' . '/';
@@ -141,40 +144,38 @@ function lab_migration_upload_dependency_form_submit($form, &$form_state)
                     ":filepath" => $dest_path . $_FILES['files']['name'][$file_form_name],
                     ":filemime" => $_FILES['files']['type'][$file_form_name],
                     ":filesize" => $_FILES['files']['size'][$file_form_name],
-                    ":caption" => check_plain($form_state['values'][$file_form_name . '_caption']),
-                    ":description" => check_plain($form_state['values'][$file_form_name . '_description']),
+                    ":caption" => \Drupal\Component\Utility\Html::escape($form_state['values'][$file_form_name . '_caption']),
+                    ":description" => \Drupal\Component\Utility\Html::escape($form_state['values'][$file_form_name . '_description']),
                     ":timestamp" => time()
                 );
-                $dependency_ids[] = db_query($query, $args, array(
-                    'return' => Database::RETURN_INSERT_ID
-                ));
-                drupal_set_message($file_name . ' uploaded successfully.', 'status');
+                $dependency_ids[] = \Drupal::database()->query($query, $args, $query);
+                \Drupal::messenger()->addStatus($file_name . ' uploaded successfully.');
                 $dependency_names[] = $_FILES['files']['name'][$file_form_name];
                 $file_upload_counter++;
               }
             else
               {
-                drupal_set_message('Error uploading dependency : ' . $dest_path . $_FILES['files']['name'][$file_form_name], 'error');
+                \Drupal::messenger()->addError('Error uploading dependency : ' . $dest_path . $_FILES['files']['name'][$file_form_name]);
               }
           }
       }
     if ($file_upload_counter > 0)
       {
-        drupal_set_message('Dependencies uploaded successfully.', 'status');
+        \Drupal::messenger()->addStatus('Dependencies uploaded successfully.');
         /* sending email */
         $param['dependency_uploaded']['user_id'] = $user->uid;
         $param['dependency_uploaded']['dependency_names'] = $dependency_names;
-        $email_to = $user->mail . ', ' . variable_get('lab_migration_emails', '');
-        if (!drupal_mail('lab_migration', 'dependency_uploaded', $email_to, language_default(), $param, variable_get('lab_migration_from_email', NULL), TRUE))
-            drupal_set_message('Error sending email message.', 'error');
+        $email_to = $user->mail . ', ' . \Drupal::config('lab_migration.settings')->get('lab_migration_emails');
+        if (!drupal_mail('lab_migration', 'dependency_uploaded', $email_to, language_default(), $param, \Drupal::config('lab_migration.settings')->get('lab_migration_from_email'), TRUE))
+            \Drupal::messenger()->addError('Error sending email message.');
       }
-    drupal_goto('lab-migration/code/upload-dep');
+    RedirectResponse('lab-migration/code/upload-dep');
   }
 function _list_existing_dependency($proposal_id)
   {
     $return_html = '<ul>';
-    // $proposal_dependency_files_q = db_query("SELECT * FROM {lab_migration_dependency_files} WHERE proposal_id = %d ORDER BY filename ASC", $proposal_id);
-    $query = db_select('lab_migration_dependency_files');
+    // $proposal_dependency_files_q = $injected_database->query("SELECT * FROM {lab_migration_dependency_files} WHERE proposal_id = %d ORDER BY filename ASC", $proposal_id);
+    $query = \Drupal::database()->select('lab_migration_dependency_files');
     $query->fields('lab_migration_dependency_files');
     $query->condition('proposal_id', $proposal_id);
     $query->orderBy('filename', 'ASC');
@@ -185,7 +186,10 @@ function _list_existing_dependency($proposal_id)
         $temp_caption = '';
         if ($proposal_dependency_files_data->caption)
             $temp_caption = ' (' . $proposal_dependency_files_data->caption . ')';
-        $return_html .= '<li>' . l($proposal_dependency_files_data->filename . $temp_caption, 'lab-migration/download/dependency/' . $proposal_dependency_files_data->id) . '</li>';
+        // @FIXME
+// \Drupal\Core\Link expects a Url object, created from a route name or external URI.
+// $return_html .= '<li>' . l($proposal_dependency_files_data->filename . $temp_caption, 'lab-migration/download/dependency/' . $proposal_dependency_files_data->id) . '</li>';
+
         $counter++;
       }
     if ($counter == 0)

@@ -9,7 +9,7 @@ function lab_migration_settings_form($form, $form_state)
         '#size' => 50,
         '#maxlength' => 255,
         '#required' => TRUE,
-        '#default_value' => variable_get('lab_migration_emails', '')
+        '#default_value' => \Drupal::config('lab_migration.settings')->get('lab_migration_emails')
     );
     $form['cc_emails'] = array(
         '#type' => 'textfield',
@@ -18,7 +18,7 @@ function lab_migration_settings_form($form, $form_state)
         '#size' => 50,
         '#maxlength' => 255,
         '#required' => TRUE,
-        '#default_value' => variable_get('lab_migration_cc_emails', '')
+        '#default_value' => \Drupal::config('lab_migration.settings')->get('lab_migration_cc_emails')
     );
     $form['from_email'] = array(
         '#type' => 'textfield',
@@ -27,7 +27,7 @@ function lab_migration_settings_form($form, $form_state)
         '#size' => 50,
         '#maxlength' => 255,
         '#required' => TRUE,
-        '#default_value' => variable_get('lab_migration_from_email', '')
+        '#default_value' => \Drupal::config('lab_migration.settings')->get('lab_migration_from_email')
     );
     $form['extensions']['source'] = array(
         '#type' => 'textfield',
@@ -36,7 +36,7 @@ function lab_migration_settings_form($form, $form_state)
         '#size' => 50,
         '#maxlength' => 255,
         '#required' => TRUE,
-        '#default_value' => variable_get('lab_migration_source_extensions', '')
+        '#default_value' => \Drupal::config('lab_migration.settings')->get('lab_migration_source_extensions')
     );
     $form['extensions']['dependency'] = array(
         '#type' => 'textfield',
@@ -45,7 +45,7 @@ function lab_migration_settings_form($form, $form_state)
         '#size' => 50,
         '#maxlength' => 255,
         '#required' => TRUE,
-        '#default_value' => variable_get('lab_migration_dependency_extensions', '')
+        '#default_value' => \Drupal::config('lab_migration.settings')->get('lab_migration_dependency_extensions')
     );
     $form['extensions']['result'] = array(
         '#type' => 'textfield',
@@ -54,7 +54,7 @@ function lab_migration_settings_form($form, $form_state)
         '#size' => 50,
         '#maxlength' => 255,
         '#required' => TRUE,
-        '#default_value' => variable_get('lab_migration_result_extensions', '')
+        '#default_value' => \Drupal::config('lab_migration.settings')->get('lab_migration_result_extensions')
     );
     $form['extensions']['xcos'] = array(
         '#type' => 'textfield',
@@ -63,7 +63,7 @@ function lab_migration_settings_form($form, $form_state)
         '#size' => 50,
         '#maxlength' => 255,
         '#required' => TRUE,
-        '#default_value' => variable_get('lab_migration_xcos_extensions', '')
+        '#default_value' => \Drupal::config('lab_migration.settings')->get('lab_migration_xcos_extensions')
     );
     $form['extensions']['pdf'] = array(
         '#type' => 'textfield',
@@ -72,7 +72,7 @@ function lab_migration_settings_form($form, $form_state)
         '#size' => 50,
         '#maxlength' => 255,
         '#required' => TRUE,
-        '#default_value' => variable_get('lab_migration_pdf_extensions', '')
+        '#default_value' => \Drupal::config('lab_migration.settings')->get('lab_migration_pdf_extensions')
     );
     $form['extensions']['syllabus'] = array(
         '#type' => 'textfield',
@@ -81,7 +81,7 @@ function lab_migration_settings_form($form, $form_state)
         '#size' => 50,
         '#maxlength' => 255,
         '#required' => TRUE,
-        '#default_value' => variable_get('lab_migration_syllabus_file_extensions', '')
+        '#default_value' => \Drupal::config('lab_migration.settings')->get('lab_migration_syllabus_file_extensions')
     );
     $form['submit'] = array(
         '#type' => 'submit',
@@ -95,14 +95,14 @@ function lab_migration_settings_form_validate($form, &$form_state)
   }
 function lab_migration_settings_form_submit($form, &$form_state)
   {
-    variable_set('lab_migration_emails', $form_state['values']['emails']);
-    variable_set('lab_migration_cc_emails', $form_state['values']['cc_emails']);
-    variable_set('lab_migration_from_email', $form_state['values']['from_email']);
-    variable_set('lab_migration_source_extensions', $form_state['values']['source']);
-    variable_set('lab_migration_dependency_extensions', $form_state['values']['dependency']);
-    variable_set('lab_migration_result_extensions', $form_state['values']['result']);
-    variable_set('lab_migration_xcos_extensions', $form_state['values']['xcos']);
-    variable_set('lab_migration_pdf_extensions', $form_state['values']['pdf']);
-    variable_set('lab_migration_syllabus_file_extensions', $form_state['values']['syllabus']);
-    drupal_set_message(t('Settings updated'), 'status');
+    \Drupal::configFactory()->getEditable('lab_migration.settings')->set('lab_migration_emails', $form_state['values']['emails'])->save();
+    \Drupal::configFactory()->getEditable('lab_migration.settings')->set('lab_migration_cc_emails', $form_state['values']['cc_emails'])->save();
+    \Drupal::configFactory()->getEditable('lab_migration.settings')->set('lab_migration_from_email', $form_state['values']['from_email'])->save();
+    \Drupal::configFactory()->getEditable('lab_migration.settings')->set('lab_migration_source_extensions', $form_state['values']['source'])->save();
+    \Drupal::configFactory()->getEditable('lab_migration.settings')->set('lab_migration_dependency_extensions', $form_state['values']['dependency'])->save();
+    \Drupal::configFactory()->getEditable('lab_migration.settings')->set('lab_migration_result_extensions', $form_state['values']['result'])->save();
+    \Drupal::configFactory()->getEditable('lab_migration.settings')->set('lab_migration_xcos_extensions', $form_state['values']['xcos'])->save();
+    \Drupal::configFactory()->getEditable('lab_migration.settings')->set('lab_migration_pdf_extensions', $form_state['values']['pdf'])->save();
+    \Drupal::configFactory()->getEditable('lab_migration.settings')->set('lab_migration_syllabus_file_extensions', $form_state['values']['syllabus'])->save();
+    \Drupal::messenger()->addStatus(t('Settings updated'));
   }

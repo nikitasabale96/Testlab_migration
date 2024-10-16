@@ -25,21 +25,21 @@ function _latex_generate_files($lab_id, $full_lab = FALSE)
     $depedency_list = array();
     $eol = "\n";
     $sep = "#";
-    //$proposal_q = db_query("SELECT * FROM {lab_migration_proposal} WHERE id = %d", $lab_id);
-    $query = db_select('lab_migration_proposal');
+    //$proposal_q = $injected_database->query("SELECT * FROM {lab_migration_proposal} WHERE id = %d", $lab_id);
+    $query = \Drupal::database()->select('lab_migration_proposal');
     $query->fields('lab_migration_proposal');
     $query->condition('id', $lab_id);
     $proposal_q = $query->execute();
     $proposal_data = $proposal_q->fetchObject();
     if (!$proposal_data)
       {
-        drupal_set_message('Invalid lab specified.', 'error');
-        drupal_goto('');
+        \Drupal::messenger()->addError('Invalid lab specified.');
+        RedirectResponse('');
       }
     if ($proposal_data->approval_status == 0)
       {
-        drupal_set_message('Lab proposal is still in pending review.', 'error');
-        drupal_goto('');
+        \Drupal::messenger()->addError('Lab proposal is still in pending review.');
+        RedirectResponse('');
       }
     $category_data = '';
     switch ($proposal_data->category)
@@ -106,14 +106,14 @@ function _latex_generate_files($lab_id, $full_lab = FALSE)
         readfile($dir_path . "lab_" . $proposal_data->id . ".pdf");
         return;
       }
-    $solution_provider_user = user_load($proposal_data->solution_provider_uid);
+    $solution_provider_user = \Drupal::entityTypeManager()->getStorage('user')->load($proposal_data->solution_provider_uid);
     if (!$solution_provider_user)
       {
-        drupal_set_message('Could not fetch solution provider information for the lab specified.', 'error');
+        \Drupal::messenger()->addError('Could not fetch solution provider information for the lab specified.');
       }
     $solution_provider_filedata .= $proposal_data->solution_provider_name_title . $sep . $proposal_data->solution_provider_name . $sep . $proposal_data->solution_provider_department . $sep . $proposal_data->solution_provider_university . $eol;
-    //$experiment_q = db_query("SELECT * FROM {lab_migration_experiment} WHERE proposal_id = %d ORDER BY number DESC", $proposal_data->id);
-    $query = db_select('lab_migration_experiment');
+    //$experiment_q = $injected_database->query("SELECT * FROM {lab_migration_experiment} WHERE proposal_id = %d ORDER BY number DESC", $proposal_data->id);
+    $query = \Drupal::database()->select('lab_migration_experiment');
     $query->fields('lab_migration_experiment');
     $query->condition('proposal_id', $proposal_data->id);
     $query->orderBy('number', 'DESC');
@@ -122,8 +122,8 @@ function _latex_generate_files($lab_id, $full_lab = FALSE)
       {
         if ($full_lab)
           {
-            //$solution_q = db_query("SELECT * FROM {lab_migration_solution} WHERE experiment_id = %d ORDER BY code_number DESC", $experiment_data->id);
-            $query = db_select('lab_migration_solution');
+            //$solution_q = $injected_database->query("SELECT * FROM {lab_migration_solution} WHERE experiment_id = %d ORDER BY code_number DESC", $experiment_data->id);
+            $query = \Drupal::database()->select('lab_migration_solution');
             $query->fields('lab_migration_solution');
             $query->condition('experiment_id', $experiment_data->id);
             $query->orderBy('code_number', 'DESC');
@@ -131,8 +131,8 @@ function _latex_generate_files($lab_id, $full_lab = FALSE)
           }
         else
           {
-            //$solution_q = db_query("SELECT * FROM {lab_migration_solution} WHERE experiment_id = %d AND approval_status = 1 ORDER BY code_number DESC", $experiment_data->id);
-            $query = db_select('lab_migration_solution');
+            //$solution_q = $injected_database->query("SELECT * FROM {lab_migration_solution} WHERE experiment_id = %d AND approval_status = 1 ORDER BY code_number DESC", $experiment_data->id);
+            $query = \Drupal::database()->select('lab_migration_solution');
             $query->fields('lab_migration_solution');
             $query->condition('experiment_id', $experiment_data->id);
             $query->condition('approval_status', 1);
@@ -141,8 +141,8 @@ function _latex_generate_files($lab_id, $full_lab = FALSE)
           }
         while ($solution_data = $solution_q->fetchObject())
           {
-            //$solution_files_q = db_query("SELECT * FROM {lab_migration_solution_files} WHERE solution_id = %d", $solution_data->id);
-            $query = db_select('lab_migration_solution_files');
+            //$solution_files_q = $injected_database->query("SELECT * FROM {lab_migration_solution_files} WHERE solution_id = %d", $solution_data->id);
+            $query = \Drupal::database()->select('lab_migration_solution_files');
             $query->fields('lab_migration_solution_files');
             $query->condition('solution_id', $solution_data->id);
             $solution_files_q = $query->execute();
@@ -159,15 +159,15 @@ function _latex_generate_files($lab_id, $full_lab = FALSE)
                 $latex_filedata .= $solution_files_data->id;
                 $latex_filedata .= $eol;
               }
-            //$dependency_files_q = db_query("SELECT * FROM {lab_migration_solution_dependency} WHERE solution_id = %d", $solution_data->id);
-            $query = db_select('lab_migration_solution_dependency');
+            //$dependency_files_q = $injected_database->query("SELECT * FROM {lab_migration_solution_dependency} WHERE solution_id = %d", $solution_data->id);
+            $query = \Drupal::database()->select('lab_migration_solution_dependency');
             $query->fields('lab_migration_solution_dependency');
             $query->condition('solution_id', $solution_data->id);
             $dependency_files_q = $query->execute();
             while ($dependency_files_data = $dependency_files_q->fetchObject())
               {
-                //$dependency_q = db_query("SELECT * FROM {lab_migration_dependency_files} WHERE id = %d LIMIT 1", $dependency_files_data->dependency_id);
-                $query = db_select('lab_migration_dependency_files');
+                //$dependency_q = $injected_database->query("SELECT * FROM {lab_migration_dependency_files} WHERE id = %d LIMIT 1", $dependency_files_data->dependency_id);
+                $query = \Drupal::database()->select('lab_migration_dependency_files');
                 $query->fields('lab_migration_dependency_files');
                 $query->condition('id', $dependency_files_data->dependency_id);
                 $query->range(0, 1);
@@ -194,8 +194,8 @@ function _latex_generate_files($lab_id, $full_lab = FALSE)
       }
     foreach ($depedency_list as $row => $data)
       {
-        //$dependency_q = db_query("SELECT * FROM {lab_migration_dependency_files} WHERE id = %d LIMIT 1", $row);
-        $query = db_select('lab_migration_dependency_files');
+        //$dependency_q = $injected_database->query("SELECT * FROM {lab_migration_dependency_files} WHERE id = %d LIMIT 1", $row);
+        $query = \Drupal::database()->select('lab_migration_dependency_files');
         $query->fields('lab_migration_dependency_files');
         $query->condition('id', $row);
         $query->range(0, 1);
@@ -238,7 +238,7 @@ function _latex_generate_files($lab_id, $full_lab = FALSE)
       }
     else
       {
-        drupal_set_message("Error occurred when generating the PDF version of the Book.", 'error');
+        \Drupal::messenger()->addError("Error occurred when generating the PDF version of the Book.");
       }
     /*********************** DELETING TEMPORARY FILES ***************************/
     /* regenerate lab if full lab selected */
@@ -268,7 +268,7 @@ function lab_migration_delete_lab_pdf()
   {
     $lab_id = arg(3);
     lab_migration_del_lab_pdf($lab_id);
-    drupal_set_message(t('Lab schedule for regeneration.'), 'status');
-    drupal_goto('lab_migration/code_approval/bulk');
+    \Drupal::messenger()->addStatus(t('Lab schedule for regeneration.'));
+    RedirectResponse('lab_migration/code_approval/bulk');
     return;
   }

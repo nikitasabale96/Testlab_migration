@@ -67,7 +67,7 @@ dd {margin:1em 0 1em 1em}
 - The array $HTTP_SERVER_VARS is no longer used. It could cause trouble on PHP5-based configurations with the register_long_arrays option disabled.<br>
 - Fixed a problem related to Type1 font embedding which caused trouble to some PDF processors.<br>
 - The file name sent to the browser could not contain a space character.<br>
-- The Cell() method could not print the number 0 (you had to pass the string '0').<br>
+- The Cel\Drupal\Core\Link method could not print the number 0 (you had to pass the string '0').<br>
 </dd>
 <dt><strong>v1.52</strong> (2003-12-30)</dt>
 <dd>
@@ -77,7 +77,7 @@ dd {margin:1em 0 1em 1em}
 - Inserting remote JPEG images doesn't generate an error any longer.<br>
 - Decimal separator is forced to dot in the constructor.<br>
 - Added several encodings (Turkish, Thai, Hebrew, Ukrainian and Vietnamese).<br>
-- The last line of a right-aligned MultiCell() was not correctly aligned if it was terminated by a carriage return.<br>
+- The last line of a right-aligned MultiCel\Drupal\Core\Link was not correctly aligned if it was terminated by a carriage return.<br>
 - No more error message about already sent headers when outputting the PDF to the standard output from the command line.<br>
 - The underlining was going too far for text containing characters \, ( or ).<br>
 - $HTTP_ENV_VARS has been replaced by $HTTP_SERVER_VARS.<br>
@@ -101,7 +101,7 @@ dd {margin:1em 0 1em 1em}
 - Internal and external link support (AddLink(), SetLink(), Link()).<br>
 - Added right margin management and methods SetRightMargin(), SetTopMargin().<br>
 - Modification of SetDisplayMode() to select page layout.<br>
-- The border parameter of MultiCell() now lets choose borders to draw as Cell().<br>
+- The border parameter of MultiCel\Drupal\Core\Link now lets choose borders to draw as Cel\Drupal\Core\Link.<br>
 - When a document contains no page, Close() now calls AddPage() instead of causing a fatal error.<br>
 </dd>
 <dt><strong>v1.41</strong> (2002-03-13)</dt>
@@ -116,19 +116,19 @@ dd {margin:1em 0 1em 1em}
 - Added AcceptPageBreak() method.<br>
 - Ability to print the total number of pages (AliasNbPages()).<br>
 - Choice of cell borders to draw.<br>
-- New mode for Cell(): the current position can now move under the cell.<br>
+- New mode for Cel\Drupal\Core\Link: the current position can now move under the cell.<br>
 - Ability to include an image by specifying height only (width is calculated automatically).<br>
 - Fixed a bug: when a justified line triggered a page break, the footer inherited the corresponding word spacing.<br>
 </dd>
 <dt><strong>v1.31</strong> (2002-01-12)</dt>
 <dd>
-- Fixed a bug in drawing frame with MultiCell(): the last line always started from the left margin.<br>
+- Fixed a bug in drawing frame with MultiCel\Drupal\Core\Link: the last line always started from the left margin.<br>
 - Removed Expires HTTP header (gives trouble in some situations).<br>
 - Added Content-disposition HTTP header (seems to help in some situations).<br>
 </dd>
 <dt><strong>v1.3</strong> (2001-12-03)</dt>
 <dd>
-- Line break and text justification support (MultiCell()).<br>
+- Line break and text justification support (MultiCel\Drupal\Core\Link).<br>
 - Color support (SetDrawColor(), SetFillColor(), SetTextColor()). Possibility to draw filled rectangles and paint cell background.<br>
 - A cell whose width is declared null extends up to the right margin of the page.<br>
 - Line width is now retained from page to page and defaults to 0.2 mm.<br>

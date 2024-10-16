@@ -26,7 +26,7 @@ function lab_migration_menu()
         'title' => 'LM Manage Lab Proposals',
         'description' => 'Manage Lab Migration Proposals',
         'page callback' => 'lab_migration_proposal_pending',
-        'access callback' => 'user_access',
+        'access callback' => 'user/accountInterface',
         'access arguments' => array(
             'lab migration manage proposal'
         ),
@@ -36,7 +36,7 @@ function lab_migration_menu()
         'title' => 'Pending Proposals',
         'description' => 'Pending Lab Migration Proposals Queue',
         'page callback' => 'lab_migration_proposal_pending',
-        'access callback' => 'user_access',
+        'access callback' => 'user/accountInterface',
         'access arguments' => array(
             'lab migration manage proposal'
         ),
@@ -48,7 +48,7 @@ function lab_migration_menu()
         'title' => 'Pending Solution Proposals',
         'description' => 'Pending Lab Migration Solution Proposals Queue',
         'page callback' => 'lab_migration_solution_proposal_pending',
-        'access callback' => 'user_access',
+        'access callback' => 'user/accountInterface',
         'access arguments' => array(
             'lab migration manage proposal'
         ),
@@ -60,7 +60,7 @@ function lab_migration_menu()
         'title' => 'Pending Solution',
         'description' => 'Pending Lab Migration Solution',
         'page callback' => 'lab_migration_proposal_pending_solution',
-        'access callback' => 'user_access',
+        'access callback' => 'user/accountInterface',
         'access arguments' => array(
             'lab migration manage proposal'
         ),
@@ -72,7 +72,7 @@ function lab_migration_menu()
         'title' => 'All Proposals',
         'description' => 'All Proposals',
         'page callback' => 'lab_migration_proposal_all',
-        'access callback' => 'user_access',
+        'access callback' => 'user/accountInterface',
         'access arguments' => array(
             'lab migration manage proposal'
         ),
@@ -84,7 +84,7 @@ function lab_migration_menu()
         'title' => 'Category',
         'description' => 'Category',
         'page callback' => 'lab_migration_category_all',
-        'access callback' => 'user_access',
+        'access callback' => 'user/accountInterface',
         'access arguments' => array(
             'lab migration manage proposal'
         ),
@@ -276,7 +276,7 @@ function lab_migration_menu()
         'title' => 'Code Submission',
         'description' => 'Code Submission',
         'page callback' => 'lab_migration_list_experiments',
-        'access callback' => 'user_access',
+        'access callback' => 'user/accountInterface',
         'access arguments' => array(
             'lab migration upload code'
         ),
@@ -654,8 +654,8 @@ function lab_migration_ajax()
       {
         $chapter_number = arg(3);
         $preference_id = arg(4);
-        //$chapter_q = db_query("SELECT * FROM {lab_migration_chapter} WHERE number = %d AND preference_id = %d LIMIT 1", $chapter_number, $preference_id);
-        $query = db_select('lab_migration_chapter');
+        //$chapter_q = $injected_database->query("SELECT * FROM {lab_migration_chapter} WHERE number = %d AND preference_id = %d LIMIT 1", $chapter_number, $preference_id);
+        $query = \Drupal::database()->select('lab_migration_chapter');
         $query->fields('lab_migration_chapter');
         $query->condition('number', $chapter_number);
         $query->condition('preference_id', $preference_id);
@@ -673,7 +673,7 @@ function lab_migration_ajax()
         $preference_id = arg(4);
         $example_number = arg(5);
         $chapter_id = 0;
-        $query = db_select('lab_migration_chapter');
+        $query = \Drupal::database()->select('lab_migration_chapter');
         $query->fields('lab_migration_chapter');
         $query->condition('number', $chapter_number);
         $query->condition('preference_id', $preference_id);
@@ -688,7 +688,7 @@ function lab_migration_ajax()
           {
             $chapter_id = $chapter_data->id;
           }
-        $query = db_select('lab_migration_example');
+        $query = \Drupal::database()->select('lab_migration_example');
         $query->fields('lab_migration_example');
         $query->condition('chapter_id', $chapter_id);
         $query->condition('number', $example_number);
@@ -736,9 +736,9 @@ function lab_migration_path()
 /************************* USER VERIFICATION FUNCTIONS ************************/
 function lab_migration_get_proposal()
   {
-    global $user;
-    //$proposal_q = db_query("SELECT * FROM {lab_migration_proposal} WHERE solution_provider_uid = ".$user->uid." AND solution_status = 2 ORDER BY id DESC LIMIT 1");
-    $query = db_select('lab_migration_proposal');
+    $user = \Drupal::currentUser();
+    //$proposal_q = $injected_database->query("SELECT * FROM {lab_migration_proposal} WHERE solution_provider_uid = ".$user->uid." AND solution_status = 2 ORDER BY id DESC LIMIT 1");
+    $query = \Drupal::database()->select('lab_migration_proposal');
     $query->fields('lab_migration_proposal');
     $query->condition('solution_provider_uid', $user->uid);
     $query->condition('solution_status', 2);
@@ -748,24 +748,27 @@ function lab_migration_get_proposal()
     $proposal_data = $proposal_q->fetchObject();
     if (!$proposal_data)
       {
-        drupal_set_message("You do not have any approved Lab migraion solution proposal. Please check the " . l('available', 'lab-migration/open-proposal') . " Lab migration proposal.", 'error');
-        drupal_goto('');
+        // @FIXME
+// \Drupal\Core\Link expects a Url object, created from a route name or external URI.
+// add_message("You do not have any approved Lab migraion solution proposal. Please check the " . l('available', 'lab-migration/open-proposal') . " Lab migration proposal.", 'error');
+
+        RedirectResponse('');
       }
     switch ($proposal_data->approval_status)
     {
         case 0:
-            drupal_set_message(t('Proposal is awaiting approval.'), 'status');
+            \Drupal::messenger()->addStatus(t('Proposal is awaiting approval.'));
             return FALSE;
         case 1:
             return $proposal_data;
         case 2:
-            drupal_set_message(t('Proposal has been dis-approved.'), 'error');
+            \Drupal::messenger()->addError(t('Proposal has been dis-approved.'));
             return FALSE;
         case 3:
-            drupal_set_message(t('Proposal has been marked as completed.'), 'status');
+            \Drupal::messenger()->addStatus(t('Proposal has been marked as completed.'));
             return FALSE;
         default:
-            drupal_set_message(t('Invalid proposal state. Please contact site administrator for further information.'), 'error');
+            \Drupal::messenger()->addError(t('Invalid proposal state. Please contact site administrator for further information.'));
             return FALSE;
     }
     return FALSE;
@@ -826,7 +829,7 @@ function lab_migration_get_category_name($category_id)
   }
 /*function lab_migration_init() {
 
-drupal_add_js(drupal_get_path('module', 'lab_migration') . '/js/lab_migration_ajax.js', array ('scope' => 'footer'));
+#attached(drupal_get_path('module', 'lab_migration') . '/js/lab_migration_ajax.js', array ('scope' => 'footer'));
 }*/
 /*************************************************************************/
 /***** Function To convert only first charater of string in uppercase ****/
@@ -851,7 +854,7 @@ function lm_ucname($string)
 {
     $pincode = array();
     if($city){
-        $pincode_list = db_query("SELECT pincode FROM all_india_pincode WHERE city = :city AND state = :state AND district = :district", array(':city' => $city,':state'=> $state, ':district' => $district));
+        $pincode_list = \Drupal::database()->query("SELECT pincode FROM all_india_pincode WHERE city = :city AND state = :state AND district = :district", array(':city' => $city,':state'=> $state, ':district' => $district));
         while ($pincode_list_data = $pincode_list->fetchObject())
         {
             $pincode[$pincode_list_data->pincode] = $pincode_list_data->pincode;
@@ -867,7 +870,7 @@ function _lab_migration_list_of_cities($state=Null, $district=NULL)
 {
     $city = array(''=> '- Select -');
     if($state){
-        $city_list = db_query("SELECT city FROM all_india_pincode WHERE state = :state AND district = :district ORDER BY city ASC", array(':state'=> $state, ':district' =>$district));
+        $city_list = \Drupal::database()->query("SELECT city FROM all_india_pincode WHERE state = :state AND district = :district ORDER BY city ASC", array(':state'=> $state, ':district' =>$district));
         while ($city_list_data = $city_list->fetchObject())
         {
             $city[$city_list_data->city] = $city_list_data->city;
@@ -880,7 +883,7 @@ function _lab_migration_list_of_district($state=Null)
 {
     $district = array(''=> '- Select -');
     if($state){
-        $district_list = db_query("SELECT district FROM all_india_pincode WHERE state = :state ORDER BY district ASC", array(':state'=> $state));
+        $district_list = \Drupal::database()->query("SELECT district FROM all_india_pincode WHERE state = :state ORDER BY district ASC", array(':state'=> $state));
         while ($district_list_data = $district_list->fetchObject())
         {
             $district[$district_list_data->district] = $district_list_data->district;
@@ -892,7 +895,7 @@ function _lab_migration_list_of_district($state=Null)
 function _lab_migration_list_of_states()
 {
     $states = array(''=> '- Select -');
-    $states_list = db_query("SELECT state FROM all_india_pincode WHERE country = 'India' ORDER BY state ASC");
+    $states_list = \Drupal::database()->query("SELECT state FROM all_india_pincode WHERE country = 'India' ORDER BY state ASC");
     while ($states_list_data = $states_list->fetchObject())
     {
         $states[$states_list_data->state] = $states_list_data->state;
@@ -902,7 +905,7 @@ function _lab_migration_list_of_states()
  function _lm_list_of_states()
   {
     $states = array(0 => '-Select-');
-    $query = db_select('list_states_of_india');
+    $query = \Drupal::database()->select('list_states_of_india');
     $query->fields('list_states_of_india');
     //$query->orderBy('', '');
     $states_list = $query->execute();
@@ -917,7 +920,7 @@ function _lab_migration_list_of_states()
 function _lm_list_of_cities()
   {
     $city = array(0 => '-Select-');
-    $query = db_select('list_cities_of_india');
+    $query = \Drupal::database()->select('list_cities_of_india');
     $query->fields('list_cities_of_india');
     $query->orderBy('city', 'ASC');
     $city_list = $query->execute();
@@ -930,7 +933,7 @@ function _lm_list_of_cities()
 function _lm_list_of_departments()
   {
     $department = array();
-    $query = db_select('list_of_departments');
+    $query = \Drupal::database()->select('list_of_departments');
     $query->fields('list_of_departments');
     $query->orderBy('id', 'DESC');
     $department_list = $query->execute();
@@ -943,7 +946,7 @@ function _lm_list_of_departments()
 function _lm_list_of_software_version()
   {
     $software_version = array();
-    $query = db_select('r_software_version');
+    $query = \Drupal::database()->select('r_software_version');
     $query->fields('r_software_version');
     //$query->orderBy('id', 'DESC');
     $software_version_list = $query->execute();
@@ -958,33 +961,39 @@ function _lm_list_of_software_version()
 
 function _list_all_lm_certificates()
     {
-        $query = db_query("SELECT * FROM lab_migration_certificate");
+        $query = \Drupal::database()->query("SELECT * FROM lab_migration_certificate");
         $search_rows = array();
         $output = '';
-        $details_list = $query->fetchAll();
+        $details_list = $query->fetchAl;
         foreach ($details_list as $details)
             {
                 if ($details->type == "Proposer")
                     {
-                        $search_rows[] = array(
-                                $details->lab_name,
-                                $details->institute_name,
-                                $details->name,
-                                $details->type,
-                                l('Download Certificate', 'lab-migration/certificate/generate-pdf/' . $details->proposal_id . '/' . $details->id),
-                                l('Edit Certificate', 'lab-migration/certificate/lm-proposer/form/edit/' . $details->proposal_id . '/' . $details->id)
-                        );
+                        // @FIXME
+// \Drupal\Core\Link expects a Url object, created from a route name or external URI.
+// $search_rows[] = array(
+//                                 $details->lab_name,
+//                                 $details->institute_name,
+//                                 $details->name,
+//                                 $details->type,
+//                                 l('Download Certificate', 'lab-migration/certificate/generate-pdf/' . $details->proposal_id . '/' . $details->id),
+//                                 l('Edit Certificate', 'lab-migration/certificate/lm-proposer/form/edit/' . $details->proposal_id . '/' . $details->id)
+//                         );
+
                     } //$details->type == "Proposer"
                 else
                     {
-                        $search_rows[] = array(
-                                $details->lab_name,
-                                $details->institute_name,
-                                $details->name,
-                                $details->type,
-                                l('Download Certificate', 'lab-migration/certificate/generate-pdf/' . $details->proposal_id . '/' . $details->id),
-                                l('Edit Certificate', 'lab-migration/certificate/lm-participation/form/edit/' . $details->proposal_id . '/' . $details->id)
-                        );
+                        // @FIXME
+// \Drupal\Core\Link expects a Url object, created from a route name or external URI.
+// $search_rows[] = array(
+//                                 $details->lab_name,
+//                                 $details->institute_name,
+//                                 $details->name,
+//                                 $details->type,
+//                                 l('Download Certificate', 'lab-migration/certificate/generate-pdf/' . $details->proposal_id . '/' . $details->id),
+//                                 l('Edit Certificate', 'lab-migration/certificate/lm-participation/form/edit/' . $details->proposal_id . '/' . $details->id)
+//                         );
+
                     }
             } //$details_list as $details
         $search_header = array(
@@ -995,10 +1004,19 @@ function _list_all_lm_certificates()
                 'Download Certificates',
                 'Edit Certificates'
         );
-        $output .= theme('table', array(
-                'header' => $search_header,
-                'rows' => $search_rows
-        ));
+        // @FIXME
+// _theme has been renamed to __theme and should NEVER be called directly.
+// Calling __theme directly can alter the expected output and potentially
+// introduce security issues (see https://www.drupal.org/node/2195739). You
+// should use renderable arrays instead.
+// 
+// 
+// @see https://www.drupal.org/node/2195739
+// $output .= theme('table', array(
+//                 'header' => $search_header,
+//                 'rows' => $search_rows
+//         ));
+
         return $output;
     }
 /********** Lab migration certificate form **************/
@@ -1066,7 +1084,7 @@ function lab_migration_certificate_form($form, $form_state)
     }
 function lab_migration_certificate_form_submit($form, &$form_state)
     {
-        global $user;
+        $user = \Drupal::currentUser();
         $v = $form_state["values"];
         $result = "INSERT INTO {lab_migration_certificate} 
     (uid, name_title, name, email_id, institute_name, institute_address, lab_name, department, semester_details,proposal_id,type,creation_date) VALUES
@@ -1085,8 +1103,8 @@ function lab_migration_certificate_form_submit($form, &$form_state)
                 ":type" => "Proposer",
                 ":creation_date" => time()
         );
-        $proposal_id = db_query($result, $args);
-        drupal_goto('lab-migration/certificate');
+        $proposal_id = \Drupal::database()->query($result, $args);
+        RedirectResponse('lab-migration/certificate');
     }
 function lab_migration_certificate_edit_form($form, $form_state)
     {
@@ -1098,7 +1116,7 @@ function lab_migration_certificate_edit_form($form, $form_state)
         //die;
         if ($type == "lm-proposer" && $action == "edit")
             {
-                $query = db_query("SELECT * FROM lab_migration_certificate WHERE proposal_id=:prop_id AND id=:certi_id", array(
+                $query = \Drupal::database()->query("SELECT * FROM lab_migration_certificate WHERE proposal_id=:prop_id AND id=:certi_id", array(
                         ":prop_id" => $proposal_id,
                         ":certi_id" => $certi_id
                 ));
@@ -1190,7 +1208,7 @@ function lab_migration_certificate_edit_form($form, $form_state)
     }
 function lab_migration_certificate_edit_form_submit($form, &$form_state)
     {
-        global $user;
+        $user = \Drupal::currentUser();
         $v = $form_state["values"];
         $result = "UPDATE lab_migration_certificate SET
     uid=:uid, 
@@ -1221,8 +1239,8 @@ function lab_migration_certificate_edit_form_submit($form, &$form_state)
                 ":creation_date" => time(),
                 ":certi_id" => $v['certi_id']
         );
-        $proposal_id = db_query($result, $args);
-        drupal_goto('lab-migration/certificate');
+        $proposal_id = \Drupal::database()->query($result, $args);
+        RedirectResponse('lab-migration/certificate');
     }    
 function lab_migration_certificate_participation_form($form, $form_state)
     {
@@ -1289,7 +1307,7 @@ function lab_migration_certificate_participation_form($form, $form_state)
     }
 function lab_migration_certificate_participation_form_submit($form, &$form_state)
     {
-        global $user;
+        $user = \Drupal::currentUser();
         $v = $form_state["values"];
         $result = "INSERT INTO {lab_migration_certificate} 
     (uid, name_title, name, email_id, institute_name, institute_address, lab_name, department, semester_details,proposal_id,type,creation_date) VALUES
@@ -1308,8 +1326,8 @@ function lab_migration_certificate_participation_form_submit($form, &$form_state
                 ":type" => "Participant",
                 ":creation_date" => time()
         );
-        $proposal_id = db_query($result, $args);
-        drupal_goto('lab-migration/certificate');
+        $proposal_id = \Drupal::database()->query($result, $args);
+        RedirectResponse('lab-migration/certificate');
     }
 function lab_migration_certificate_participation_edit_form($form, $form_state)
     {
@@ -1319,7 +1337,7 @@ function lab_migration_certificate_participation_edit_form($form, $form_state)
         $certi_id = arg(6);
         if ($type == "lm-participation" && $action == "edit")
             {
-                $query = db_query("SELECT * FROM lab_migration_certificate WHERE proposal_id=:prop_id AND id=:certi_id", array(
+                $query = \Drupal::database()->query("SELECT * FROM lab_migration_certificate WHERE proposal_id=:prop_id AND id=:certi_id", array(
                         ":prop_id" => $proposal_id,
                         ":certi_id" => $certi_id
                 ));
@@ -1411,7 +1429,7 @@ function lab_migration_certificate_participation_edit_form($form, $form_state)
     }
 function lab_migration_certificate_participation_edit_form_submit($form, &$form_state)
     {
-        global $user;
+        $user = \Drupal::currentUser();
         $v = $form_state["values"];
         $result = "UPDATE lab_migration_certificate SET
     uid=:uid, 
@@ -1442,6 +1460,6 @@ function lab_migration_certificate_participation_edit_form_submit($form, &$form_
                 ":creation_date" => time(),
                 ":certi_id" => $v['certi_id']
         );
-        $proposal_id = db_query($result, $args);
-        drupal_goto('lab-migration/certificate');
+        $proposal_id = \Drupal::database()->query($result, $args);
+        RedirectResponse('lab-migration/certificate');
     }

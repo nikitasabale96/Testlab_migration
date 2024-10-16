@@ -4,9 +4,9 @@ function lab_migration_download_solution_file()
   {
     $solution_file_id = arg(3);
     $root_path = lab_migration_path();
-    // $solution_files_q = db_query("SELECT * FROM {lab_migration_solution_files} WHERE id = %d LIMIT 1", $solution_file_id);
-    $solution_files_q = db_query("SELECT lmsf.*, lmp.directory_name FROM lab_migration_solution_files lmsf JOIN lab_migration_solution lms JOIN lab_migration_experiment lme JOIN lab_migration_proposal lmp WHERE lms.id = lmsf.solution_id AND lme.id = lms.experiment_id AND lmp.id = lme.proposal_id AND lmsf.id = :solution_id LIMIT 1", array(':solution_id' => $solution_file_id));
-    /*$query = db_select('lab_migration_solution_files');
+    // $solution_files_q = $injected_database->query("SELECT * FROM {lab_migration_solution_files} WHERE id = %d LIMIT 1", $solution_file_id);
+    $solution_files_q = \Drupal::database()->query("SELECT lmsf.*, lmp.directory_name FROM lab_migration_solution_files lmsf JOIN lab_migration_solution lms JOIN lab_migration_experiment lme JOIN lab_migration_proposal lmp WHERE lms.id = lmsf.solution_id AND lme.id = lms.experiment_id AND lmp.id = lme.proposal_id AND lmsf.id = :solution_id LIMIT 1", array(':solution_id' => $solution_file_id));
+    /*$query = $injected_database->select('lab_migration_solution_files');
     $query->fields('lab_migration_solution_files');
     $query->condition('id', $solution_file_id);
     $query->range(0, 1);
@@ -22,8 +22,8 @@ function lab_migration_download_dependency_file()
   {
     $dependency_file_id = arg(3);
     $root_path = lab_migration_path();
-    //$dependency_file_q = db_query("SELECT * FROM {lab_migration_dependency_files} WHERE id = %d LIMIT 1", $dependency_file_id);
-    $query = db_select('lab_migration_dependency_files');
+    //$dependency_file_q = $injected_database->query("SELECT * FROM {lab_migration_dependency_files} WHERE id = %d LIMIT 1", $dependency_file_id);
+    $query = \Drupal::database()->select('lab_migration_dependency_files');
     $query->fields('lab_migration_dependency_files');
     $query->condition('id', $dependency_file_id);
     $query->range(0, 1);
@@ -40,26 +40,26 @@ function lab_migration_download_solution()
     $solution_id = arg(3);
     $root_path = lab_migration_path();
     /* get solution data */
-    //$solution_q = db_query("SELECT * FROM {lab_migration_solution} WHERE id = %d", $solution_id);
-    $query = db_select('lab_migration_solution');
+    //$solution_q = $injected_database->query("SELECT * FROM {lab_migration_solution} WHERE id = %d", $solution_id);
+    $query = \Drupal::database()->select('lab_migration_solution');
     $query->fields('lab_migration_solution');
     $query->condition('id', $solution_id);
     $solution_q = $query->execute();
     $solution_data = $solution_q->fetchObject();
-    //$experiment_q = db_query("SELECT * FROM {lab_migration_experiment} WHERE id = %d", $solution_data->experiment_id);
-    $query = db_select('lab_migration_experiment');
+    //$experiment_q = $injected_database->query("SELECT * FROM {lab_migration_experiment} WHERE id = %d", $solution_data->experiment_id);
+    $query = \Drupal::database()->select('lab_migration_experiment');
     $query->fields('lab_migration_experiment');
     $query->condition('id', $solution_data->experiment_id);
     $experiment_q = $query->execute();
     $experiment_data = $experiment_q->fetchObject();
-    //$solution_files_q = db_query("SELECT * FROM {lab_migration_solution_files} WHERE solution_id = %d", $solution_id);
-    /*$query = db_select('lab_migration_solution_files');
+    //$solution_files_q = $injected_database->query("SELECT * FROM {lab_migration_solution_files} WHERE solution_id = %d", $solution_id);
+    /*$query = $injected_database->select('lab_migration_solution_files');
     $query->fields('lab_migration_solution_files');
     $query->condition('solution_id', $solution_id);
     $solution_files_q = $query->execute();*/
-    $solution_files_q = db_query("SELECT lmsf.*, lmp.directory_name FROM lab_migration_solution_files lmsf JOIN lab_migration_solution lms JOIN lab_migration_experiment lme JOIN lab_migration_proposal lmp WHERE lms.id = lmsf.solution_id AND lme.id = lms.experiment_id AND lmp.id = lme.proposal_id AND lmsf.id = :solution_id", array(':solution_id' => $solution_id));
-    //$solution_dependency_files_q = db_query("SELECT * FROM {lab_migration_solution_dependency} WHERE solution_id = %d", $solution_id);
-    $query = db_select('lab_migration_solution_dependency');
+    $solution_files_q = \Drupal::database()->query("SELECT lmsf.*, lmp.directory_name FROM lab_migration_solution_files lmsf JOIN lab_migration_solution lms JOIN lab_migration_experiment lme JOIN lab_migration_proposal lmp WHERE lms.id = lmsf.solution_id AND lme.id = lms.experiment_id AND lmp.id = lme.proposal_id AND lmsf.id = :solution_id", array(':solution_id' => $solution_id));
+    //$solution_dependency_files_q = $injected_database->query("SELECT * FROM {lab_migration_solution_dependency} WHERE solution_id = %d", $solution_id);
+    $query = \Drupal::database()->select('lab_migration_solution_dependency');
     $query->fields('lab_migration_solution_dependency');
     $query->condition('solution_id', $solution_id);
     $solution_dependency_files_q = $query->execute();
@@ -76,8 +76,8 @@ function lab_migration_download_solution()
     /* dependency files */
     while ($solution_dependency_files_row = $solution_dependency_files_q->fetchObject())
       {
-        //$dependency_file_data = (db_query("SELECT * FROM {lab_migration_dependency_files} WHERE id = %d LIMIT 1", $solution_dependency_files_row->dependency_id))->fetchObject();
-        $query = db_select('lab_migration_dependency_files');
+        //$dependency_file_data = ($injected_database->query("SELECT * FROM {lab_migration_dependency_files} WHERE id = %d LIMIT 1", $solution_dependency_files_row->dependency_id))->fetchObject();
+        $query = \Drupal::database()->select('lab_migration_dependency_files');
         $query->fields('lab_migration_dependency_files');
         $query->condition('id', $solution_dependency_files_row->dependency_id);
         $query->range(0, 1);
@@ -100,8 +100,8 @@ function lab_migration_download_solution()
       }
     else
       {
-        drupal_set_message("There are no files in this solutions to download", 'error');
-        drupal_goto('lab-migration/lab-migration-run');
+        \Drupal::messenger()->addError("There are no files in this solutions to download");
+        RedirectResponse('lab-migration/lab-migration-run');
       }
   }
 function lab_migration_download_experiment()
@@ -110,8 +110,8 @@ function lab_migration_download_experiment()
     
     $root_path = lab_migration_path();
     /* get solution data */
-    //$experiment_q = db_query("SELECT * FROM {lab_migration_experiment} WHERE id = %d", $experiment_id);
-    $query = db_select('lab_migration_experiment');
+    //$experiment_q = $injected_database->query("SELECT * FROM {lab_migration_experiment} WHERE id = %d", $experiment_id);
+    $query = \Drupal::database()->select('lab_migration_experiment');
     $query->fields('lab_migration_experiment');
     $query->condition('id', $experiment_id);
     $experiment_q = $query->execute();
@@ -122,8 +122,8 @@ function lab_migration_download_experiment()
     /* creating zip archive on the server */
     $zip = new ZipArchive;
     $zip->open($zip_filename, ZipArchive::CREATE);
-    //$solution_q = db_query("SELECT * FROM {lab_migration_solution} WHERE experiment_id = %d AND approval_status = 1", $experiment_id);
-    $query = db_select('lab_migration_solution');
+    //$solution_q = $injected_database->query("SELECT * FROM {lab_migration_solution} WHERE experiment_id = %d AND approval_status = 1", $experiment_id);
+    $query = \Drupal::database()->select('lab_migration_solution');
     $query->fields('lab_migration_solution');
     $query->condition('experiment_id', $experiment_id);
     $query->condition('approval_status', 1);
@@ -131,26 +131,26 @@ function lab_migration_download_experiment()
     while ($solution_row = $solution_q->fetchObject())
       {
         $CODE_PATH = 'CODE' . $solution_row->code_number . '/';
-        // $solution_files_q = db_query("SELECT * FROM {lab_migration_solution_files} WHERE solution_id = %d", $solution_row->id);
-         $solution_files_q = db_query("SELECT lmsf.*, lmp.directory_name FROM lab_migration_solution_files lmsf JOIN lab_migration_solution lms JOIN lab_migration_experiment lme JOIN lab_migration_proposal lmp WHERE lms.id = lmsf.solution_id AND lme.id = lms.experiment_id AND lmp.id = lme.proposal_id AND lmsf.solution_id = :solution_id", array(':solution_id' => $solution_row->id));
-       /* $query = db_select('lab_migration_solution_files');
+        // $solution_files_q = $injected_database->query("SELECT * FROM {lab_migration_solution_files} WHERE solution_id = %d", $solution_row->id);
+         $solution_files_q = \Drupal::database()->query("SELECT lmsf.*, lmp.directory_name FROM lab_migration_solution_files lmsf JOIN lab_migration_solution lms JOIN lab_migration_experiment lme JOIN lab_migration_proposal lmp WHERE lms.id = lmsf.solution_id AND lme.id = lms.experiment_id AND lmp.id = lme.proposal_id AND lmsf.solution_id = :solution_id", array(':solution_id' => $solution_row->id));
+       /* $query = $injected_database->select('lab_migration_solution_files');
         $query->fields('lab_migration_solution_files');
         $query->condition('solution_id', $solution_row->id);
         $solution_files_q = $query->execute();*/
-        // $solution_dependency_files_q = db_query("SELECT * FROM {lab_migration_solution_dependency} WHERE solution_id = %d", $solution_row->id);        
+        // $solution_dependency_files_q = $injected_database->query("SELECT * FROM {lab_migration_solution_dependency} WHERE solution_id = %d", $solution_row->id);        
         while ($solution_files_row = $solution_files_q->fetchObject())
           {
             $zip->addFile($root_path . $solution_files_row->directory_name .'/'. $solution_files_row->filepath, $EXP_PATH . $CODE_PATH . str_replace(' ', '_', ($solution_files_row->filename)));
           }
         /* dependency files */
-        $query = db_select('lab_migration_solution_dependency');
+        $query = \Drupal::database()->select('lab_migration_solution_dependency');
         $query->fields('lab_migration_solution_dependency');
         $query->condition('solution_id', $solution_row->id);
         $solution_dependency_files_q = $query->execute();
         while ($solution_dependency_files_row = $solution_dependency_files_q->fetchObject())
           {
-            //$dependency_file_data = (db_query("SELECT * FROM {lab_migration_dependency_files} WHERE id = %d LIMIT 1", $solution_dependency_files_row->dependency_id))->fetchObject();
-            $query = db_select('lab_migration_dependency_files');
+            //$dependency_file_data = ($injected_database->query("SELECT * FROM {lab_migration_dependency_files} WHERE id = %d LIMIT 1", $solution_dependency_files_row->dependency_id))->fetchObject();
+            $query = \Drupal::database()->select('lab_migration_dependency_files');
             $query->fields('lab_migration_dependency_files');
             $query->condition('id', $solution_dependency_files_row->dependency_id);
             $query->range(0, 1);
@@ -174,18 +174,18 @@ function lab_migration_download_experiment()
       }
     else
       {
-        drupal_set_message("There are no solutions in this experiment to download", 'error');
-        drupal_goto('lab-migration/lab-migration-run');
+        \Drupal::messenger()->addError("There are no solutions in this experiment to download");
+        RedirectResponse('lab-migration/lab-migration-run');
       }
   }
 function lab_migration_download_lab()
   {
-    global $user;
+    $user = \Drupal::currentUser();
     $lab_id = arg(3);
     $root_path = lab_migration_path();
     /* get solution data */
-    //$lab_q = db_query("SELECT * FROM {lab_migration_proposal} WHERE id = %d", $lab_id);
-    $query = db_select('lab_migration_proposal');
+    //$lab_q = $injected_database->query("SELECT * FROM {lab_migration_proposal} WHERE id = %d", $lab_id);
+    $query = \Drupal::database()->select('lab_migration_proposal');
     $query->fields('lab_migration_proposal');
     $query->condition('id', $lab_id);
     $lab_q = $query->execute();
@@ -196,16 +196,16 @@ function lab_migration_download_lab()
     /* creating zip archive on the server */
     $zip = new ZipArchive();
     $zip->open($zip_filename, ZipArchive::CREATE);
-    //$experiment_q = db_query("SELECT * FROM {lab_migration_experiment} WHERE proposal_id = %d", $lab_id);
-    $query = db_select('lab_migration_experiment');
+    //$experiment_q = $injected_database->query("SELECT * FROM {lab_migration_experiment} WHERE proposal_id = %d", $lab_id);
+    $query = \Drupal::database()->select('lab_migration_experiment');
     $query->fields('lab_migration_experiment');
     $query->condition('proposal_id', $lab_id);
     $experiment_q = $query->execute();
     while ($experiment_row = $experiment_q->fetchObject())
       {
         $EXP_PATH = 'EXP' . $experiment_row->number . '/';
-        //$solution_q = db_query("SELECT * FROM {lab_migration_solution} WHERE experiment_id = %d AND approval_status = 1", $experiment_row->id);
-        $query = db_select('lab_migration_solution');
+        //$solution_q = $injected_database->query("SELECT * FROM {lab_migration_solution} WHERE experiment_id = %d AND approval_status = 1", $experiment_row->id);
+        $query = \Drupal::database()->select('lab_migration_solution');
         $query->fields('lab_migration_solution');
         $query->condition('experiment_id', $experiment_row->id);
         $query->condition('approval_status', 1);
@@ -213,15 +213,15 @@ function lab_migration_download_lab()
         while ($solution_row = $solution_q->fetchObject())
           {
             $CODE_PATH = 'CODE' . $solution_row->code_number . '/';
-            //$solution_files_q = db_query("SELECT * FROM {lab_migration_solution_files} WHERE solution_id = %d", $solution_row->id);
+            //$solution_files_q = $injected_database->query("SELECT * FROM {lab_migration_solution_files} WHERE solution_id = %d", $solution_row->id);
             
-            $solution_files_q = db_query("SELECT lmsf.*, lmp.directory_name FROM lab_migration_solution_files lmsf JOIN lab_migration_solution lms JOIN lab_migration_experiment lme JOIN lab_migration_proposal lmp WHERE lms.id = lmsf.solution_id AND lme.id = lms.experiment_id AND lmp.id = lme.proposal_id AND lmsf.id = :solution_id", array(':solution_id' => $solution_row->id));
-            /*$query = db_select('lab_migration_solution_files');
+            $solution_files_q = \Drupal::database()->query("SELECT lmsf.*, lmp.directory_name FROM lab_migration_solution_files lmsf JOIN lab_migration_solution lms JOIN lab_migration_experiment lme JOIN lab_migration_proposal lmp WHERE lms.id = lmsf.solution_id AND lme.id = lms.experiment_id AND lmp.id = lme.proposal_id AND lmsf.id = :solution_id", array(':solution_id' => $solution_row->id));
+            /*$query = $injected_database->select('lab_migration_solution_files');
             $query->fields('lab_migration_solution_files');
             $query->condition('solution_id', $solution_row->id);
             $solution_files_q = $query->execute();*/
-            //$solution_dependency_files_q = db_query("SELECT * FROM {lab_migration_solution_dependency} WHERE solution_id = %d", $solution_row->id);
-            $query = db_select('lab_migration_solution_dependency');
+            //$solution_dependency_files_q = $injected_database->query("SELECT * FROM {lab_migration_solution_dependency} WHERE solution_id = %d", $solution_row->id);
+            $query = \Drupal::database()->select('lab_migration_solution_dependency');
             $query->fields('lab_migration_solution_dependency');
             $query->condition('solution_id', $solution_row->id);
             $solution_dependency_files_q = $query->execute();
@@ -234,8 +234,8 @@ function lab_migration_download_lab()
             /* dependency files */
             while ($solution_dependency_files_row = $solution_dependency_files_q->fetchObject())
               {
-                //$dependency_file_data = (db_query("SELECT * FROM {lab_migration_dependency_files} WHERE id = %d LIMIT 1", $solution_dependency_files_row->dependency_id))->fetchObject();
-                $query = db_select('lab_migration_dependency_files');
+                //$dependency_file_data = ($injected_database->query("SELECT * FROM {lab_migration_dependency_files} WHERE id = %d LIMIT 1", $solution_dependency_files_row->dependency_id))->fetchObject();
+                $query = \Drupal::database()->select('lab_migration_dependency_files');
                 $query->fields('lab_migration_dependency_files');
                 $query->condition('id', $solution_dependency_files_row->dependency_id);
                 $query->range(0, 1);
@@ -277,15 +277,15 @@ function lab_migration_download_lab()
       }
     else
       {
-        drupal_set_message("There are no solutions in this Lab to download", 'error');
-        drupal_goto('lab-migration/lab-migration-run');
+        \Drupal::messenger()->addError("There are no solutions in this Lab to download");
+        RedirectResponse('lab-migration/lab-migration-run');
       }
   }
 function lab_migration_download_syllabus_copy()
 {
   $proposal_id = (int)arg(3);
   $root_path = lab_migration_path();
-  $query = db_select('lab_migration_proposal');
+  $query = \Drupal::database()->select('lab_migration_proposal');
   $query->fields('lab_migration_proposal');
   $query->condition('id', $proposal_id);
   $query->range(0, 1);

@@ -22,7 +22,7 @@ lab_migration_solution : approval_status
 */
 function lab_migration_proposal_form($form, &$form_state)
   {
-    global $user;
+    $user = \Drupal::currentUser();
     $form = array();
     $state =  _lab_migration_list_of_states();
     $selected_state = isset($form_state['values']['all_state'])?$form_state['values']['all_state']:key($state);
@@ -34,12 +34,12 @@ function lab_migration_proposal_form($form, &$form_state)
     $selected_pincode = isset($form_state['values']['picode'])?$form_state['values']['pincode']:key($pincode);
     /************************ start approve book details ************************/
     if ($user->uid == 0) {
-        $msg =  drupal_set_message(t('It is mandatory to ' . l('login', 'user') . ' on this website to access the lab proposal form. If you are new user please create a new account first.'), 'error');
-         //drupal_goto('lab-migration-project');
-         drupal_goto('user');
+        $msg =  \Drupal::messenger()->addError(t('It is mandatory to ' . \Drupal\Core\Link::fromTextAndUrl('login', \Drupal\Core\Url::fromRoute('user.page')) . ' on this website to access the lab proposal form. If you are new user please create a new account first.'));
+         //RedirectResponse('lab-migration-project');
+         RedirectResponse('user');
          return $msg;
     }
-    $query = db_select('lab_migration_proposal');
+    $query = \Drupal::database()->select('lab_migration_proposal');
     $query->fields('lab_migration_proposal');
     $query->condition('uid', $user->uid);
     $query->orderBy('id', 'DESC');
@@ -50,8 +50,8 @@ function lab_migration_proposal_form($form, &$form_state)
       {
         if ($proposal_data->approval_status == 0 || $proposal_data->approval_status == 1)
           {
-            drupal_set_message(t('We have already received your proposal.'), 'status');
-            drupal_goto('');
+            \Drupal::messenger()->addStatus(t('We have already received your proposal.'));
+            RedirectResponse('');
             return;
           }
       }
@@ -253,7 +253,7 @@ function lab_migration_proposal_form($form, &$form_state)
         '#size' => 48,
         '#description' => t('Separate filenames with underscore. No spaces or any special characters allowed in filename.') .
                 '<br />' . t('<span style="color:red;">Allowed file extensions : ') .
-                            variable_get('lab_migration_syllabus_file_extensions', '') . '</span>'
+                            \Drupal::config('lab_migration.settings')->get('lab_migration_syllabus_file_extensions') . '</span>'
     );
 
     $form['lab_title'] = array(
@@ -358,13 +358,13 @@ function lab_migration_proposal_form_validate($form, &$form_state)
   {
     if (!preg_match('/^[0-9\ \+]{0,15}$/', $form_state['values']['contact_ph']))
       {
-        form_set_error('contact_ph', t('Invalid contact phone number'));
+        $form_state->setErrorByName('contact_ph', t('Invalid contact phone number'));
       }
     if ($form_state['values']['country'] == 'Others')
       {
         if ($form_state['values']['other_country'] == '')
           {
-            form_set_error('other_country', t('Enter country name'));
+            $form_state->setErrorByName('other_country', t('Enter country name'));
             // $form_state['values']['country'] = $form_state['values']['other_country'];
           }
         else
@@ -373,7 +373,7 @@ function lab_migration_proposal_form_validate($form, &$form_state)
           }
         if ($form_state['values']['other_state'] == '')
           {
-            form_set_error('other_state', t('Enter state name'));
+            $form_state->setErrorByName('other_state', t('Enter state name'));
             // $form_state['values']['country'] = $form_state['values']['other_country'];
           }
         else
@@ -382,7 +382,7 @@ function lab_migration_proposal_form_validate($form, &$form_state)
           }
         if ($form_state['values']['other_city'] == '')
           {
-            form_set_error('other_city', t('Enter city name'));
+            $form_state->setErrorByName('other_city', t('Enter city name'));
             // $form_state['values']['country'] = $form_state['values']['other_country'];
           }
         else
@@ -394,17 +394,17 @@ function lab_migration_proposal_form_validate($form, &$form_state)
       {
         if ($form_state['values']['country'] == '')
           {
-            form_set_error('country', t('Select country name'));
+            $form_state->setErrorByName('country', t('Select country name'));
             // $form_state['values']['country'] = $form_state['values']['other_country'];
           }
         if ($form_state['values']['all_state'] == '')
           {
-            form_set_error('all_state', t('Select state name'));
+            $form_state->setErrorByName('all_state', t('Select state name'));
             // $form_state['values']['country'] = $form_state['values']['other_country'];
           }
         if ($form_state['values']['city'] == '')
           {
-            form_set_error('city', t('Select city name'));
+            $form_state->setErrorByName('city', t('Select city name'));
             // $form_state['values']['country'] = $form_state['values']['other_country'];
           }
       }
@@ -416,7 +416,7 @@ function lab_migration_proposal_form_validate($form, &$form_state)
           {
             if (strlen(trim($form_state['values'][$experiment_description])) <= 49)
               {
-                form_set_error($experiment_description, t('Description should be minimum of 50 characters'));
+                $form_state->setErrorByName($experiment_description, t('Description should be minimum of 50 characters'));
               }
           }
       }
@@ -424,7 +424,7 @@ function lab_migration_proposal_form_validate($form, &$form_state)
       {
         if ($form_state['values']['older'] == '')
           {
-            form_set_error('older', t('Please provide valid version'));
+            $form_state->setErrorByName('older', t('Please provide valid version'));
           }
       }
 
@@ -432,7 +432,7 @@ function lab_migration_proposal_form_validate($form, &$form_state)
     {
         /* check if atleast one source or result file is uploaded */
         if (!($_FILES['files']['name']['syllabus_copy_file']))
-            form_set_error('syllabus_copy_file', t('Please upload pdf file.'));
+            $form_state->setErrorByName('syllabus_copy_file', t('Please upload pdf file.'));
         /* check for valid filename extensions */
         foreach ($_FILES['files']['name'] as $file_form_name => $file_name)
         {
@@ -447,7 +447,7 @@ function lab_migration_proposal_form_validate($form, &$form_state)
                 switch ($file_type)
                 {
                     case 'S':
-                        $allowed_extensions_str = variable_get('lab_migration_syllabus_file_extensions', '');
+                        $allowed_extensions_str = \Drupal::config('lab_migration.settings')->get('lab_migration_syllabus_file_extensions');
                         break;
                 } //$file_type
                 $allowed_extensions = explode(',', $allowed_extensions_str);
@@ -455,12 +455,12 @@ function lab_migration_proposal_form_validate($form, &$form_state)
                 $allowd_files = explode('.', $allowd_file);
                 $temp_extension = end($allowd_files);
                 if (!in_array($temp_extension, $allowed_extensions))
-                    form_set_error($file_form_name, t('Only file with ' . $allowed_extensions_str . ' extensions can be uploaded.'));
+                    $form_state->setErrorByName($file_form_name, t('Only file with ' . $allowed_extensions_str . ' extensions can be uploaded.'));
                 if ($_FILES['files']['size'][$file_form_name] <= 0)
-                    form_set_error($file_form_name, t('File size cannot be zero.'));
+                    $form_state->setErrorByName($file_form_name, t('File size cannot be zero.'));
                 /* check if valid file name */
                 if (!lab_migration_check_valid_filename($_FILES['files']['name'][$file_form_name]))
-                    form_set_error($file_form_name, t('Invalid file name specified. Only alphabets and numbers are allowed as a valid filename.'));
+                    $form_state->setErrorByName($file_form_name, t('Invalid file name specified. Only alphabets and numbers are allowed as a valid filename.'));
             } //$file_name
         } //$_FILES['files']['name'] as $file_form_name => $file_name
     } //isset($_FILES['files'])
@@ -469,10 +469,10 @@ function lab_migration_proposal_form_validate($form, &$form_state)
   }
 function lab_migration_proposal_form_submit($form, &$form_state)
   {
-    global $user;
+    $user = \Drupal::currentUser();
     if (!$user->uid)
       {
-        drupal_set_message('It is mandatory to login on this website to access the proposal form', 'error');
+        \Drupal::messenger()->addError('It is mandatory to login on this website to access the proposal form');
         return;
       }
     $solution_provider_uid = 0;
@@ -549,9 +549,7 @@ function lab_migration_proposal_form_submit($form, &$form_state)
         ":directory_name" => $directory_name,
         ":syllabus_copy_file_path" => "",
     );
-    $proposal_id = db_query($result, $args, array(
-        'return' => Database::RETURN_INSERT_ID
-    ));
+    $proposal_id = \Drupal::database()->query($result, $args, $result);
     $root_path = lab_migration_path();
     $dest_path = $proposal_id . '/';
     if (!is_dir($root_path . $dest_path))
@@ -565,9 +563,9 @@ function lab_migration_proposal_form_submit($form, &$form_state)
             $file_type = 'S';
             if (file_exists($root_path . $dest_path . $_FILES['files']['name'][$file_form_name]))
             {
-                drupal_set_message(t("Error uploading file. File !filename already exists.", array(
+                \Drupal::messenger()->addError(t("Error uploading file. File !filename already exists.", array(
                     '!filename' => $_FILES['files']['name'][$file_form_name]
-                )), 'error');
+                )));
                 return;
             } //file_exists($root_path . $dest_path . $_FILES['files']['name'][$file_form_name])
             /* uploading file */
@@ -578,18 +576,18 @@ function lab_migration_proposal_form_submit($form, &$form_state)
                     ":syllabus_copy_file_path" => $dest_path . $_FILES['files']['name'][$file_form_name],
                     ":id" => $proposal_id
                 );
-                $updateresult = db_query($query, $args);
-                drupal_set_message($file_name . ' uploaded successfully.', 'status');
+                $updateresult = \Drupal::database()->query($query, $args);
+                \Drupal::messenger()->addStatus($file_name . ' uploaded successfully.');
             } //move_uploaded_file($_FILES['files']['tmp_name'][$file_form_name], $root_path . $dest_path . $_FILES['files']['name'][$file_form_name])
             else
             {
-                drupal_set_message('Error uploading file : ' . $dest_path . '/' . $file_name, 'error');
+                \Drupal::messenger()->addError('Error uploading file : ' . $dest_path . '/' . $file_name);
             }
         } //$file_name
     } //$_FILES['files']['name'] as $file_form_name => $file_name
     if (!$proposal_id)
       {
-        drupal_set_message(t('Error receiving your proposal. Please try again.'), 'error');
+        \Drupal::messenger()->addError(t('Error receiving your proposal. Please try again.'));
         return;
       }
     /* proposal id */
@@ -611,10 +609,10 @@ function lab_migration_proposal_form_submit($form, &$form_state)
                 ":experiment_field_name" => trim($form_state['values'][$experiment_field_name]),
                 ":description" => trim($form_state['values'][$experiment_description])
             );
-            $result = db_query($query, $args);
+            $result = \Drupal::database()->query($query, $args);
             if (!$result)
               {
-                drupal_set_message(t('Could not insert Title of the Experiment : ') . trim($form_state['values'][$experiment_field_name]), 'error');
+                \Drupal::messenger()->addError(t('Could not insert Title of the Experiment : ') . trim($form_state['values'][$experiment_field_name]));
               }
             else
               {
@@ -624,9 +622,9 @@ function lab_migration_proposal_form_submit($form, &$form_state)
       }
     /* sending email */
     $email_to = $user->mail;
-    $from = variable_get('lab_migration_from_email', '');
-    $bcc = variable_get('lab_migration_emails', '');
-    $cc = variable_get('lab_migration_cc_emails', '');
+    $from = \Drupal::config('lab_migration.settings')->get('lab_migration_from_email');
+    $bcc = \Drupal::config('lab_migration.settings')->get('lab_migration_emails');
+    $cc = \Drupal::config('lab_migration.settings')->get('lab_migration_cc_emails');
     $param['proposal_received']['proposal_id'] = $proposal_id;
     $param['proposal_received']['user_id'] = $user->uid;
     $param['proposal_received']['headers'] = array(
@@ -639,9 +637,9 @@ function lab_migration_proposal_form_submit($form, &$form_state)
         'Bcc' => $bcc
     );
     if (!drupal_mail('lab_migration', 'proposal_received', $email_to, user_preferred_language($user), $param, $from, TRUE))
-        drupal_set_message('Error sending email message.', 'error');
-    drupal_set_message(t('We have received you Lab migration proposal. We will get back to you soon.'), 'status');
-    drupal_goto('');
+        \Drupal::messenger()->addError('Error sending email message.');
+    \Drupal::messenger()->addStatus(t('We have received you Lab migration proposal. We will get back to you soon.'));
+    RedirectResponse('');
   }
 
 function _lm_dir_name($lab, $name, $university)
@@ -661,12 +659,12 @@ function ajax_get_lm_city_list_callback($form, $form_state)
     if ($district_default_value != '0')
     {
         $form['city']['#options'] = _lab_migration_list_of_cities($state_default_value, $district_default_value);
-        $commands[] = ajax_command_replace("#ajax-city-list-replace", drupal_render($form['city']));
+        $commands[] = ajax_command_replace("#ajax-city-list-replace", \Drupal::service("renderer")->render($form['city']));
         $form['pincode']['#options'] =  array('0' => '- Select -');
-        $commands[] = ajax_command_replace("#ajax-pincode-list-replace", drupal_render($form['pincode']));
+        $commands[] = ajax_command_replace("#ajax-pincode-list-replace", \Drupal::service("renderer")->render($form['pincode']));
     }else{
         $form['city']['#options'] = array('0' => '- Select -');
-        $commands[] = ajax_command_replace("#ajax-city-list-replace", drupal_render($form['city']));
+        $commands[] = ajax_command_replace("#ajax-city-list-replace", \Drupal::service("renderer")->render($form['city']));
     }
     return array(
         '#type' => 'ajax',
@@ -679,18 +677,18 @@ function ajax_get_lm_district_list_callback($form, $form_state)
     if ($state_default_value != '0')
     {
         $form['district']['#options'] = _lab_migration_list_of_district($state_default_value);
-        $commands[] = ajax_command_replace("#ajax-district-list-replace", drupal_render($form['district']));
+        $commands[] = ajax_command_replace("#ajax-district-list-replace", \Drupal::service("renderer")->render($form['district']));
         $form['pincode']['#options'] =  array('0' =>'- Select -');
-        $commands[] = ajax_command_replace("#ajax-pincode-list-replace", drupal_render($form['pincode']));
+        $commands[] = ajax_command_replace("#ajax-pincode-list-replace", \Drupal::service("renderer")->render($form['pincode']));
         $form['city']['#options'] = array('0' => '- Select -');
-        $commands[] = ajax_command_replace("#ajax-city-list-replace", drupal_render($form['city']));
+        $commands[] = ajax_command_replace("#ajax-city-list-replace", \Drupal::service("renderer")->render($form['city']));
     }else{
         $form['district']['#options'] = array('0' => '- Select -');
-        $commands[] = ajax_command_replace("#ajax-district-list-replace", drupal_render($form['district']));
+        $commands[] = ajax_command_replace("#ajax-district-list-replace", \Drupal::service("renderer")->render($form['district']));
         $form['pincode']['#options'] =  array('0' =>'- Select -');
-        $commands[] = ajax_command_replace("#ajax-pincode-list-replace", drupal_render($form['pincode']));
+        $commands[] = ajax_command_replace("#ajax-pincode-list-replace", \Drupal::service("renderer")->render($form['pincode']));
         $form['city']['#options'] = array('0' => '- Select -');
-        $commands[] = ajax_command_replace("#ajax-city-list-replace", drupal_render($form['city']));
+        $commands[] = ajax_command_replace("#ajax-city-list-replace", \Drupal::service("renderer")->render($form['city']));
     }
     return array(
         '#type' => 'ajax',
@@ -705,10 +703,10 @@ function ajax_get_lm_city_pincode_list_callback($form, $form_state)
     if ($city_default_value != '0')
     {
         $form['pincode']['#options'] = _lab_migration_list_of_city_pincode($city_default_value,$state_default_value,$district_default_value);
-        $commands[] = ajax_command_replace("#ajax-pincode-list-replace", drupal_render($form['pincode']));
+        $commands[] = ajax_command_replace("#ajax-pincode-list-replace", \Drupal::service("renderer")->render($form['pincode']));
     }else{
         $form['pincode']['#options'] =  array('0' => '- Select -');
-        $commands[] = ajax_command_replace("#ajax-pincode-list-replace", drupal_render($form['pincode']));
+        $commands[] = ajax_command_replace("#ajax-pincode-list-replace", \Drupal::service("renderer")->render($form['pincode']));
     }
     return array(
         '#type' => 'ajax',
